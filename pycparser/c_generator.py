@@ -8,12 +8,13 @@
 #------------------------------------------------------------------------------
 from . import c_ast
 
-
 class CGenerator(object):
     """ Uses the same visitor pattern as c_ast.NodeVisitor, but modified to
         return a value from each visit method, using string accumulation in
         generic_visit.
     """
+    cli_stub = False   # used to preserve the type info or not
+    
     def __init__(self):
         self.output = ''
 
@@ -25,12 +26,13 @@ class CGenerator(object):
     def _make_indent(self):
         return ' ' * self.indent_level
 
+    # passing Cli to indicate if we need preserve the type
     def visit(self, node):
         tmp_str = node.__class__.__name__
         method = 'visit_' + tmp_str
         if (tmp_str == "Typedef"):
             return ''
-        if(tmp_str == "IdentifierType"):
+        if(self.cli_stub == True and tmp_str == "IdentifierType"):
             return ''
         return getattr(self, method, self.generic_visit)(node)
 

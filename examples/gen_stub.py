@@ -11,8 +11,7 @@ from pycparser import parse_file, c_generator, c_parser, c_ast, preprocess_file
 #
 sys.path.extend(['.', '..'])
 
-def gen_skeleton_ast(ast, NORMAL = True, STUB = False):
-    print('\n*****')
+def gen_skeleton_ast(ast, NORMAL = True, C_STUB = False, S_STUB = False, A_STUB = False):
     
 # Proprocessing passed in c files here
 #     with open('c_files/tmp.c', 'w') as f:
@@ -22,38 +21,64 @@ def gen_skeleton_ast(ast, NORMAL = True, STUB = False):
 
     if (NORMAL):
         template_path = 'c_files/normal/'
-    elif (STUB):
-        template_path = 'c_files/stub/'
+    elif (C_STUB):
+        template_path = 'c_files/cli_stub/'
+    elif (S_STUB):
+        template_path = 'c_files/ser_stub/'
+    elif (A_STUB):
+        template_path = 'c_files/asm_stub/'
     else:
         return
     
     libc_path = '-I../utils/fake_libc_include'
     
-    ast_0_arg = parse_file(template_path + 'template_0.c', use_cpp=True, cpp_path='cpp', 
-                           cpp_args=libc_path)    
-    ast_1_arg = parse_file(template_path + 'template_1.c', use_cpp=True, cpp_path='cpp', 
-                           cpp_args=libc_path)
-    ast_2_arg = parse_file(template_path + 'template_2.c', use_cpp=True, cpp_path='cpp', 
-                           cpp_args=libc_path)
-    ast_3_arg = parse_file(template_path + 'template_3.c', use_cpp=True, cpp_path='cpp', 
-                           cpp_args=libc_path)
-    ast_4_arg = parse_file(template_path + 'template_4.c', use_cpp=True, cpp_path='cpp', 
-                           cpp_args=libc_path)
+    if (NORMAL or C_STUB or S_STUB):
+        ast_0_arg = parse_file(template_path + 'template_0.c', use_cpp=True, cpp_path='cpp', 
+                               cpp_args=libc_path)    
+        ast_1_arg = parse_file(template_path + 'template_1.c', use_cpp=True, cpp_path='cpp', 
+                               cpp_args=libc_path)
+        ast_2_arg = parse_file(template_path + 'template_2.c', use_cpp=True, cpp_path='cpp', 
+                               cpp_args=libc_path)
+        ast_3_arg = parse_file(template_path + 'template_3.c', use_cpp=True, cpp_path='cpp', 
+                               cpp_args=libc_path)
+        ast_4_arg = parse_file(template_path + 'template_4.c', use_cpp=True, cpp_path='cpp', 
+                               cpp_args=libc_path)
+    elif (A_STUB):
+        ast_0_arg = []
+        with open (template_path+ "template.S", "r") as myfile:
+            for line in myfile:
+                ast_0_arg.append(line) 
+        ast_1_arg = []
+        ast_2_arg = []
+        ast_3_arg = []
+        ast_4_arg = []
+    else:
+        return
 
-    if (NORMAL):
-        dummy_func_body_list = ['R_TYPE', 'ARG_1', 'ARG_2', 'ARG_3', 'ARG_4']
-    elif (STUB):
+    if (NORMAL or S_STUB):
+        dummy_func_body_list = ['R_TYPE', '__sg_FN_NAME', 'FN_NAME', 'ARG1_TYPE', 'ARG1',
+                                'ARG2_TYPE', 'ARG2', 'ARG3_TYPE', 'ARG3', 'ARG4_TYPE', 'ARG4']
+    elif (C_STUB):
         dummy_func_body_list = ['FUNC_T', 'FUNC_N', 'ARG1_T', 'ARG1_V', 'ARG2_T', 'ARG2_V'
                                 , 'ARG3_T', 'ARG3_V', 'ARG4_T', 'ARG4_V']
+    elif (A_STUB):
+        dummy_func_body_list = ['FUNC_NAME']
     else:
         return
     
     ast_list = [ast_0_arg, ast_1_arg, ast_2_arg, ast_3_arg, ast_4_arg, dummy_func_body_list]
     
-    if (NORMAL):    
+    if (NORMAL or S_STUB):    
         return ast.update_normal_ast(ast_list)
-    elif (STUB):    
+    elif (C_STUB):    
         return ast.update_stub_ast(ast_list)
+    elif (A_STUB):    
+        asm_list = ast.update_asm_ast(ast_list)
+        print("")
+        target_str = ast_0_arg[-1]
+        for item in asm_list:
+            ast_0_arg.append(target_str.replace('FUNC_NAME', item[0]))
+        return (''.join([ str(myelement) for myelement in ast_0_arg if "FUNC_NAME" not in myelement]))
     else: 
         return
     
@@ -61,12 +86,12 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         filename  = sys.argv[1]
     else:
-        #filename = 'c_files/interface.h'
-        tmpPath = '/home/songjiguo/workspace/composite_test_gen/src/components/interface/mem_mgr/'
-        filename = tmpPath + 'mem_mgr.h'
+        tmpPath = '/home/songjiguo/workspace/composite_test_gen/src/components/interface/sched/'
+        interface_h = 'sched.h'
+        filename = tmpPath + interface_h
         
     # define all necessary headerfiles to be included in stub code here
-    default_headers = """\
+    default_cli_headers = """\
 #include <cos_component.h>
 #include <cos_debug.h>
 #include <print.h>
@@ -75,21 +100,36 @@ if __name__ == "__main__":
 #ifdef LOG_MONITOR
 #include <log.h>
 #endif
-
+"""
+    default_ser_headers = """\
+#include <cos_component.h>
+#include <print.h>
+#ifdef LOG_MONITOR
+#include <log.h>
+#endif
 """
     # generate predefined AST here
     ast = parse_file(filename, use_cpp=True,
             cpp_path='cpp', 
             cpp_args=r'-I../utils/fake_libc_include')
     
-    # generate new AST here
-    gen_ast_list = gen_skeleton_ast(ast, NORMAL = False, STUB = True)
+    # generate new AST for client stub
+    cli_ast_list = gen_skeleton_ast(ast, NORMAL = False,  C_STUB = True, S_STUB = False, A_STUB = False)
+    # generate new AST for server stub
+    ser_ast_list = gen_skeleton_ast(ast, NORMAL = False,  C_STUB = False, S_STUB = True, A_STUB = False)
+    # generate new AST for stub asm
+    asm_ast_list = gen_skeleton_ast(ast, NORMAL = False,  C_STUB = False, S_STUB = False, A_STUB = True)
+
     
-    # generate c code from here
-    print('\n\n***output_c***\n\n')
-    print(default_headers)
+    # generate cli stub code from here
+    print('\n***********************')
+    print('  client stub code ')
+    print('***********************')
+    print(default_cli_headers)
+    print('#include <' + interface_h + '>\n')
     generator = c_generator.CGenerator()
-    for new_ast in gen_ast_list:
+    generator.cli_stub = True
+    for new_ast in cli_ast_list:
         result = generator.visit(new_ast)
         #result = result.replace(" ", "")  # remove "{}, ;" and white spaces
         result = result.lstrip()
@@ -100,3 +140,24 @@ if __name__ == "__main__":
         print(result)
         print('')
         
+    # generate ser stub code from here
+    print('\n***********************')
+    print('  server stub code ')
+    print('***********************')    
+    print(default_ser_headers)
+    print('#include <' + interface_h + '>\n')
+    generator = c_generator.CGenerator()
+    generator.cli_stub = False
+    for new_ast in ser_ast_list:
+        result = generator.visit(new_ast)  # Only True for client stub
+        print(result)
+        print('')        
+
+    # generate ser stub code from here
+    print('\n***********************')
+    print('  asm stub code ')
+    print('***********************')      
+    print(asm_ast_list)
+    
+    
+    

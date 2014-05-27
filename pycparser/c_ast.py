@@ -140,7 +140,7 @@ class Node(object):
                     for tmp_obj in getattr(self,n):
                         if (tmp_obj == old):
                             tmpList = getattr(self,n)
-                            print(tmpList[0])
+                            #print(tmpList[0])
                             tmpList[0] = new                            
                 else:
                     tmp_obj = getattr(self,n)
@@ -163,14 +163,14 @@ class Node(object):
         ret_ast_list      = []
         dummy_body_list   = ast_arg_list[-1]
         
-        self.walk_node(sys.stdout, 0, True, True, False, 'OldAST')  # remove later
+        #self.walk_node(sys.stdout, 0, True, True, False, 'OldAST')  # remove later
         
         for ext_decl in self.ext:
             func_body_list    = []   # reset this for each declaration
-            print(ext_decl.__class__.__name__)
+            #print(ext_decl.__class__.__name__)
             if (ext_decl.__class__.__name__ == 'Typedef'):
                 continue
-            print(ext_decl.name)
+            #print(ext_decl.name)
             func_decltype = ext_decl.type
             #print(len(func_decltype.args.params))
             if hasattr(func_decltype.args, 'params'):
@@ -179,45 +179,56 @@ class Node(object):
                     if (param_type.__class__.__name__ == 'PtrDecl'):
                         param_type = param_type.type
                         # param_type.type.names[0] = param_type.type.names[0] + ' *'
-                    tmpstr = ', '.join('%s' % tt for tt in param_type.type.names)
-                    print(tmpstr + ' ' + param_type.declname)
-                    func_body_list.append(param_type.declname)  # replace args in body
+                    if (param_type.declname == None and param_type.type.names[0] == 'void'):
+                        continue
+                    tmpstr = ' '.join('%s' % tt for tt in param_type.type.names)
+                    #print(tmpstr + ' ' + param_type.declname)
+                    func_body_list.append(tmpstr)  # replace args in body
+                    func_body_list.append(param_type.declname)
                     # print(params.name)
             ret_fn = func_decltype.type
             if (ret_fn.__class__.__name__ == 'PtrDecl'):
                 ret_fn = ret_fn.type
-                #ret_fn.type.names[0] = ret_fn.type.names[0] + ' *'
             #tmpstr = ', '.join('%s' % tt for tt in ret_fn.type.names)
             tmpstr = ' '.join('%s' % tt for tt in ret_fn.type.names)
-            print(tmpstr + ' ' + ret_fn.declname)
+            #print(tmpstr + ' ' + ret_fn.declname)
             func_body_list.insert(0, tmpstr)
+            func_body_list.insert(1, '__sg_' + ret_fn.declname)
+            func_body_list.insert(2, ret_fn.declname)
             
             if hasattr(func_decltype.args, 'params'):
                 arg_list_len = len(func_decltype.args.params)
+                # for some functions that have no parameter, but pass 'void'
+                param_type = func_decltype.args.params[0].type
+                if (param_type.declname == None and param_type.type.names[0] == 'void'):
+                    arg_list_len = arg_list_len -1
+                
             else:
                 arg_list_len = 0
             
             #print(dummy_body_list)
             #print(func_body_list)
-            update_ast = ast_arg_list[arg_list_len]
+            tmp_ast = ast_arg_list[arg_list_len]
+            update_ast = copy.deepcopy(tmp_ast)   # make a copy of ast here            
+            #update_ast.walk_node(sys.stdout, 0, True, True, False, 'Before')
             for tmpObj in update_ast.ext:
                 if (tmpObj.__class__.__name__ == 'FuncDef'):
-                    tmpObj.decl.name = ret_fn.declname
-                    tmpObj.decl.type = func_decltype
-                    
+                    headObj = tmpObj.decl
+                    pos = 0
+                    for new in func_body_list:
+                        headObj.find_replace(dummy_body_list[pos], new, sys.stdout, 0, True, True, False, 'updateBody')
+                        pos = pos + 1
+
                     bodyObj = tmpObj.body
                     pos = 0
                     for new in func_body_list:
                         bodyObj.find_replace(dummy_body_list[pos], new, sys.stdout, 0, True, True, False, 'updateBody')
                         pos = pos + 1
                     
-            print('')
-            update_ast.walk_node(sys.stdout, 0, True, True, False, 'NewAST')
+            #print('')
+            #update_ast.walk_node(sys.stdout, 0, True, True, False, 'After')
             ret_ast_list.append(update_ast)  
  
-            print(func_body_list)  # [return type, arg1, arg2, ...]                    
-
-        # tmp_ast.walk_node(sys.stdout, 0, True, True, False, 'TemplateAST')
         return ret_ast_list
     
     def update_stub_ast(self, ast_arg_list):
@@ -225,14 +236,14 @@ class Node(object):
         ret_ast_list      = []
         dummy_body_list   = ast_arg_list[-1]
         
-        self.walk_node(sys.stdout, 0, True, True, False, 'OldAST')  # remove later
+        #self.walk_node(sys.stdout, 0, True, True, False, 'OldAST')  # remove later
         
         for ext_decl in self.ext:
             func_body_list    = []   # reset this for each declaration
             if (ext_decl.__class__.__name__ == 'Typedef'):
                 continue
-            print("\n\n*******\n")
-            print(ext_decl.name)
+            #print("\n\n*******\n")
+            #print(ext_decl.name)
             func_decltype = ext_decl.type
             #print(len(func_decltype.args.params))
             if hasattr(func_decltype.args, 'params'):
@@ -246,7 +257,7 @@ class Node(object):
                     if (param_type.declname == None and param_type.type.names[0] == 'void'):
                         continue                    
                     tmpstr = ' '.join('%s' % tt for tt in param_type.type.names)
-                    print(tmpstr + ' ' + param_type.declname)
+                    #print(tmpstr + ' ' + param_type.declname)
                     func_body_list.append(tmpstr)
                     func_body_list.append(param_type.declname)  # replace args in body
             ret_fn = func_decltype.type
@@ -255,7 +266,7 @@ class Node(object):
                 #ret_fn.type.names[0] = ret_fn.type.names[0] + ' *'
             #tmpstr = ', '.join('%s' % tt for tt in ret_fn.type.names)
             tmpstr = ' '.join('%s' % tt for tt in ret_fn.type.names)
-            print(tmpstr + ' ' + ret_fn.declname)
+            #print(tmpstr + ' ' + ret_fn.declname)
             #func_body_list.insert(0, tmpstr)
             func_body_list.insert(0, tmpstr)
             func_body_list.insert(1, ret_fn.declname)
@@ -269,11 +280,11 @@ class Node(object):
             else:
                 arg_list_len = 0
             
-            print(dummy_body_list)
-            print(func_body_list)
+            #print(dummy_body_list)
+            #print(func_body_list)
             tmp_ast = ast_arg_list[arg_list_len]
             update_ast = copy.deepcopy(tmp_ast)   # make a copy of ast here
-            update_ast.walk_node(sys.stdout, 0, True, True, False, 'Before---')
+            #update_ast.walk_node(sys.stdout, 0, True, True, False, 'Before---')
             for tmpObj in update_ast.ext:
                 if (tmpObj.__class__.__name__ == 'FuncDef'):
                     funObj = tmpObj.decl.type.args
@@ -288,11 +299,37 @@ class Node(object):
                         bodyObj.find_replace(dummy_body_list[pos], new, sys.stdout, 0, True, True, False, 'updateBody')
                         pos = pos + 1                        
                     
-            print('')
-            update_ast.walk_node(sys.stdout, 0, True, True, False, 'After')
+            #print('')
+            #update_ast.walk_node(sys.stdout, 0, True, True, False, 'After')
             ret_ast_list.append(update_ast)  
 
         return ret_ast_list    
+
+    def update_asm_ast(self, ast_arg_list):
+        
+        ret_ast_list      = []
+        dummy_body_list   = ast_arg_list[-1]
+        
+        #self.walk_node(sys.stdout, 0, True, True, False, 'ASMAST')  # remove later
+        for ext_decl in self.ext:
+            func_body_list    = []   # reset this for each declaration
+            if (ext_decl.__class__.__name__ == 'Typedef'):
+                continue
+#             print("\n\n*******\n")
+#             print(ext_decl.name)
+            func_decltype = ext_decl.type
+
+            ret_fn = func_decltype.type
+            if (ret_fn.__class__.__name__ == 'PtrDecl'):
+                ret_fn = ret_fn.type
+            func_body_list.append(ret_fn.declname)
+            
+#             print(dummy_body_list)
+#             print(func_body_list)
+            ret_ast_list.append(func_body_list)
+
+        return ret_ast_list
+
 
 class NodeVisitor(object):
     """ A base NodeVisitor class for visiting c_ast nodes. 

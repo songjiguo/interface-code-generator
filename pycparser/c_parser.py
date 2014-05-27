@@ -150,12 +150,10 @@ typedef signed short int   s16_t;
 typedef signed int         s32_t;
 typedef signed long long   s64_t;
         """
-        
-        
         text = typedef_str + text
         
-        print('text --' + text)
-        print('filename --' + filename + '\n')
+        #print('text --' + text)
+        #print('filename --' + filename + '\n')
         
         return self.cparser.parse(
                 input=text,
