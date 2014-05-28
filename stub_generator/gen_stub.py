@@ -20,11 +20,11 @@ def gen_skeleton_ast(ast, C_STUB = False, S_STUB = False, A_STUB = False):
 #     sys.exit()
 
     if (C_STUB):
-        template_path = 'c_files/cli_stub/'
+        template_path = 'cli_stub/'
     elif (S_STUB):
-        template_path = 'c_files/ser_stub/'
+        template_path = 'ser_stub/'
     elif (A_STUB):
-        template_path = 'c_files/asm_stub/'
+        template_path = 'asm_stub/'
     else:
         return
     

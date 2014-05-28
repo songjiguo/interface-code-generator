@@ -158,7 +158,7 @@ class Node(object):
                 showcoord=showcoord,
                 _my_node_name=child_name)    
 
-    def update_normal_ast(self, ast_arg_list):
+    def ser_stub_ast(self, ast_arg_list):
         
         ret_ast_list      = []
         dummy_body_list   = ast_arg_list[-1]
@@ -231,7 +231,7 @@ class Node(object):
  
         return ret_ast_list
     
-    def update_stub_ast(self, ast_arg_list):
+    def cli_stub_ast(self, ast_arg_list):
         
         ret_ast_list      = []
         dummy_body_list   = ast_arg_list[-1]
@@ -305,8 +305,7 @@ class Node(object):
 
         return ret_ast_list    
 
-    def update_asm_ast(self, ast_arg_list):
-        
+    def asm_ast(self, ast_arg_list):        
         ret_ast_list      = []
         dummy_body_list   = ast_arg_list[-1]
         
@@ -317,17 +316,13 @@ class Node(object):
                 continue
 #             print("\n\n*******\n")
 #             print(ext_decl.name)
-            func_decltype = ext_decl.type
-
-            ret_fn = func_decltype.type
+            ret_fn = ext_decl.type.type
             if (ret_fn.__class__.__name__ == 'PtrDecl'):
                 ret_fn = ret_fn.type
-            func_body_list.append(ret_fn.declname)
-            
+            func_body_list.append(ret_fn.declname)            
 #             print(dummy_body_list)
 #             print(func_body_list)
             ret_ast_list.append(func_body_list)
-
         return ret_ast_list
 
 
